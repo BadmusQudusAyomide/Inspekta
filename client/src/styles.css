@@ -1,0 +1,383 @@
+:root {
+  font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+  color: #f9f5ef;
+  background:
+    radial-gradient(circle at top left, rgba(254, 211, 48, 0.18), transparent 28%),
+    radial-gradient(circle at 85% 20%, rgba(55, 110, 255, 0.2), transparent 25%),
+    linear-gradient(135deg, #0f172a 0%, #1d293d 45%, #10262e 100%);
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.shell {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.backdrop {
+  position: fixed;
+  border-radius: 999px;
+  filter: blur(90px);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.backdrop-one {
+  top: -120px;
+  left: -40px;
+  width: 280px;
+  height: 280px;
+  background: #ff9e7d;
+}
+
+.backdrop-two {
+  right: -70px;
+  bottom: 60px;
+  width: 240px;
+  height: 240px;
+  background: #6de2d0;
+}
+
+.page {
+  position: relative;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 48px 20px 64px;
+}
+
+.hero {
+  animation: fadeUp 500ms ease;
+}
+
+.eyebrow,
+.sectionTag,
+.miniTag {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.76rem;
+  color: #f6d28b;
+}
+
+h1,
+h2 {
+  margin: 0;
+  line-height: 1.05;
+}
+
+h1 {
+  max-width: 780px;
+  margin-top: 12px;
+  font-size: clamp(2.6rem, 5vw, 5.3rem);
+}
+
+.lede {
+  max-width: 760px;
+  margin: 18px 0 0;
+  font-size: 1.08rem;
+  color: rgba(249, 245, 239, 0.84);
+}
+
+.searchCard,
+.emptyCard,
+.panel,
+.metricCard {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(8, 15, 27, 0.62);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 20px 70px rgba(1, 6, 20, 0.24);
+}
+
+.searchCard {
+  margin-top: 28px;
+  padding: 20px;
+  border-radius: 28px;
+}
+
+.label {
+  display: block;
+  margin-bottom: 12px;
+  color: rgba(249, 245, 239, 0.9);
+}
+
+.inputRow {
+  display: flex;
+  gap: 12px;
+}
+
+.inputRow input {
+  flex: 1;
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.inputRow button,
+.exampleChip {
+  border: 0;
+  cursor: pointer;
+}
+
+.inputRow button {
+  padding: 16px 22px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ffd05b, #ff8d66);
+  color: #101828;
+  font-weight: 700;
+}
+
+.inputRow button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.exampleRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.exampleChip {
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8e6bf;
+}
+
+.errorBanner {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 127, 80, 0.18);
+  border: 1px solid rgba(255, 177, 156, 0.45);
+}
+
+.dashboard,
+.emptyState {
+  margin-top: 34px;
+  animation: fadeUp 650ms ease;
+}
+
+.dashboardHeader {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.timestamp {
+  color: rgba(249, 245, 239, 0.7);
+}
+
+.grid {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.grid-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.grid-four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.compact {
+  margin-top: 20px;
+}
+
+.panel,
+.emptyCard {
+  border-radius: 24px;
+  padding: 22px;
+}
+
+.panel.soft {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.panel.emphasis {
+  background:
+    linear-gradient(180deg, rgba(255, 211, 109, 0.12), transparent 70%),
+    rgba(8, 15, 27, 0.62);
+}
+
+.panelTitle {
+  margin-bottom: 14px;
+  font-weight: 700;
+  color: #ffeab2;
+}
+
+.subsection {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.subheading {
+  margin-bottom: 10px;
+  color: rgba(249, 245, 239, 0.72);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+}
+
+.metricCard {
+  border-radius: 22px;
+  padding: 20px;
+}
+
+.metricCard span {
+  display: block;
+  color: rgba(249, 245, 239, 0.72);
+  margin-bottom: 10px;
+}
+
+.metricCard strong {
+  font-size: 1.3rem;
+}
+
+.verdictRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 1.02rem;
+}
+
+.plainList {
+  margin: 0;
+  padding-left: 20px;
+  color: rgba(249, 245, 239, 0.9);
+}
+
+.compactList {
+  margin-top: 6px;
+}
+
+.tagWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tag {
+  display: inline-flex;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(109, 226, 208, 0.14);
+  color: #bdf5eb;
+}
+
+.preview {
+  width: 100%;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.previewFallback {
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(249, 245, 239, 0.7);
+}
+
+.commitCard {
+  display: grid;
+  gap: 6px;
+}
+
+.sampleGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sampleBlock {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.smallText {
+  margin: 0;
+  color: rgba(249, 245, 239, 0.75);
+  word-break: break-word;
+}
+
+code {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 900px) {
+  .heroGrid,
+  .grid-two,
+  .grid-three,
+  .grid-four,
+  .sampleGrid,
+  .dashboardHeader {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: 28px 16px 56px;
+  }
+
+  .inputRow {
+    flex-direction: column;
+  }
+}
