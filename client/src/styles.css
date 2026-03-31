@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   font-family: "Segoe UI", "Helvetica Neue", sans-serif;
   color: #f9f5ef;
@@ -630,9 +632,9 @@ code {
   min-height: 100vh;
   color: #edf6ff;
   background:
-    radial-gradient(circle at 15% 20%, rgba(0, 226, 196, 0.18), transparent 24%),
-    radial-gradient(circle at 82% 18%, rgba(255, 167, 38, 0.16), transparent 24%),
-    linear-gradient(145deg, #06131d 0%, #0a1f2d 48%, #102b36 100%);
+    radial-gradient(circle at 15% 20%, rgba(168, 85, 247, 0.24), transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(217, 70, 239, 0.18), transparent 24%),
+    linear-gradient(145deg, #140a24 0%, #1b1436 48%, #23134a 100%);
 }
 
 .codeToolGlow {
@@ -648,7 +650,7 @@ code {
   left: -40px;
   width: 260px;
   height: 260px;
-  background: rgba(0, 226, 196, 0.35);
+  background: rgba(168, 85, 247, 0.4);
 }
 
 .codeToolGlow-two {
@@ -656,7 +658,7 @@ code {
   bottom: 50px;
   width: 260px;
   height: 260px;
-  background: rgba(255, 167, 38, 0.24);
+  background: rgba(217, 70, 239, 0.28);
 }
 
 .codeToolPage {
@@ -710,8 +712,8 @@ code {
   width: 48px;
   height: 48px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #00e2c4, #ffa726);
-  color: #04111a;
+  background: linear-gradient(135deg, #a855f7, #d946ef);
+  color: #f7edff;
   font-weight: 800;
 }
 
@@ -731,8 +733,8 @@ code {
 }
 
 .codeToolLink.is-active {
-  background: linear-gradient(135deg, rgba(0, 226, 196, 0.2), rgba(255, 167, 38, 0.16));
-  border-color: rgba(0, 226, 196, 0.3);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.22), rgba(217, 70, 239, 0.18));
+  border-color: rgba(192, 132, 252, 0.34);
 }
 
 .codeToolHero {
@@ -745,7 +747,7 @@ code {
   text-transform: uppercase;
   letter-spacing: 0.14em;
   font-size: 0.72rem;
-  color: #7deedc;
+  color: #d8b4fe;
 }
 
 .codeToolHero h1 {
@@ -807,8 +809,8 @@ code {
   padding: 16px 22px;
   border: 0;
   border-radius: 16px;
-  background: linear-gradient(135deg, #00e2c4, #ffa726);
-  color: #04111a;
+  background: linear-gradient(135deg, #a855f7, #d946ef);
+  color: #f7edff;
   font-weight: 800;
   cursor: pointer;
 }
@@ -859,7 +861,7 @@ code {
   padding: 10px 14px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
-  color: #9aeedf;
+  color: #e9d5ff;
 }
 
 .codeToolMetricGrid {
@@ -908,7 +910,7 @@ code {
 
 .codeToolPanelTitle {
   margin-bottom: 16px;
-  color: #9aeedf;
+  color: #d8b4fe;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -981,5 +983,56 @@ code {
   .codeToolNav {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .codeToolHeaderMeta {
+    justify-content: flex-start;
+  }
+
+  .codeToolLanguageRow,
+  .codeToolFileRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .codeToolLanguageMeta,
+  .codeToolFileMeta {
+    justify-items: start;
+    text-align: left;
+  }
+}
+
+@media (max-width: 720px) {
+  .codeToolPage {
+    padding: 22px 14px 48px;
+  }
+
+  .codeToolHero h1 {
+    font-size: clamp(2.2rem, 11vw, 3.4rem);
+  }
+
+  .codeToolForm,
+  .codeToolHeaderCard,
+  .codeToolPanel,
+  .codeToolEmptyCard,
+  .codeToolMetric {
+    border-radius: 22px;
+  }
+
+  .codeToolActions button {
+    width: 100%;
+  }
+
+  .codeToolLinks {
+    width: 100%;
+  }
+
+  .codeToolLink {
+    flex: 1 1 0;
+    text-align: center;
+  }
+
+  .codeToolMetric strong {
+    font-size: 1.7rem;
   }
 }

@@ -2,13 +2,41 @@ import { CODE_PAGE_HASH, PageMode } from "./App";
 
 export type Tone = "good" | "caution" | "danger" | "neutral";
 
+const toneClasses: Record<Tone, string> = {
+  good: "border-emerald-400/35 bg-emerald-400/10 text-emerald-100",
+  caution: "border-amber-300/35 bg-amber-300/10 text-amber-100",
+  danger: "border-rose-300/35 bg-rose-300/10 text-rose-100",
+  neutral: "border-white/12 bg-white/6 text-slate-100"
+};
+
+const toneTextClasses: Record<Tone, string> = {
+  good: "text-emerald-300",
+  caution: "text-amber-200",
+  danger: "text-rose-200",
+  neutral: "text-slate-100"
+};
+
 export function TopNav({ current }: { current: PageMode }) {
   return (
-    <nav className="topNav">
-      <a className={`navAnchor ${current === "main" ? "is-active" : ""}`} href="#">
+    <nav className="mb-7 flex flex-col gap-2 sm:flex-row">
+      <a
+        className={`inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm no-underline transition ${
+          current === "main"
+            ? "border-amber-300/35 bg-gradient-to-r from-amber-300/20 to-orange-300/15 text-amber-100"
+            : "border-white/12 bg-white/5 text-slate-100 hover:bg-white/8"
+        }`}
+        href="#"
+      >
         Main audit
       </a>
-      <a className={`navAnchor ${current === "github-code" ? "is-active" : ""}`} href={CODE_PAGE_HASH}>
+      <a
+        className={`inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm no-underline transition ${
+          current === "github-code"
+            ? "border-fuchsia-300/35 bg-gradient-to-r from-violet-500/20 to-fuchsia-500/18 text-fuchsia-100"
+            : "border-white/12 bg-white/5 text-slate-100 hover:bg-white/8"
+        }`}
+        href={CODE_PAGE_HASH}
+      >
         GitHub code inventory
       </a>
     </nav>
@@ -27,23 +55,28 @@ export function MetricCard({
   helper?: string;
 }) {
   return (
-    <article className={`metricCard metricCard-${tone}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      {helper ? <small className="metricHelper">{helper}</small> : null}
+    <article
+      className={`rounded-3xl border p-5 shadow-[0_20px_70px_rgba(1,6,20,0.24)] backdrop-blur-xl ${toneClasses[tone]}`}
+    >
+      <span className="block text-sm text-slate-300">{label}</span>
+      <strong className="mt-3 block text-2xl font-black tracking-tight">{value}</strong>
+      {helper ? <small className="mt-2 block text-sm text-slate-300">{helper}</small> : null}
     </article>
   );
 }
 
 export function TagList({ items, emptyLabel }: { items: string[]; emptyLabel: string }) {
   if (!items.length) {
-    return <p>{emptyLabel}</p>;
+    return <p className="text-sm text-slate-300">{emptyLabel}</p>;
   }
 
   return (
-    <div className="tagWrap">
+    <div className="flex flex-wrap gap-2.5">
       {items.map((item) => (
-        <span key={item} className="tag">
+        <span
+          key={item}
+          className="inline-flex rounded-full bg-cyan-300/12 px-3 py-2 text-sm text-cyan-100"
+        >
           {item}
         </span>
       ))}
@@ -63,23 +96,27 @@ export function HeadingSamples({
   ];
 
   return (
-    <div className="sampleGrid">
+    <div className="grid gap-3 md:grid-cols-3">
       {groups.map((group) => (
-        <div key={group.label} className="sampleBlock">
-          <strong>{group.label}</strong>
+        <div key={group.label} className="rounded-2xl bg-white/4 p-4">
+          <strong className="text-sm text-white">{group.label}</strong>
           {group.items.length ? (
-            <ul className="plainList compactList">
+            <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-slate-200">
               {group.items.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
           ) : (
-            <p className="smallText">No samples</p>
+            <p className="mt-2 text-sm text-slate-400">No samples</p>
           )}
         </div>
       ))}
     </div>
   );
+}
+
+export function toneTextClass(tone: Tone) {
+  return toneTextClasses[tone];
 }
 
 export function scoreTone(score: number): Tone {
