@@ -133,7 +133,7 @@ export function GithubCodePage() {
                   {result.truncated ? "Partial scan" : "Full scan"}
                 </div>
                 <div className="codeToolStatPill">
-                  {result.ignored.length ? `${result.ignored.length} ignore rules` : "No ignore rules"}
+                  {result.ignored?.length ? `${result.ignored.length} ignore rules` : "No ignore rules"}
                 </div>
               </div>
             </header>
@@ -196,7 +196,7 @@ export function GithubCodePage() {
                 <div className="codeToolPanelTitle">Scan settings</div>
                 <ul className="codeToolFacts">
                   <li>Branch analyzed: {result.branch}</li>
-                  <li>Ignore rules: {result.ignored.length ? result.ignored.join(", ") : "none"}</li>
+                  <li>Ignore rules: {result.ignored?.length ? result.ignored.join(", ") : "none"}</li>
                   <li>Count model: files, lines, blanks, comments, and LOC</li>
                   <li>
                     Safety cap: {result.truncated ? "scan was capped to keep requests reasonable" : "entire recognized set scanned"}

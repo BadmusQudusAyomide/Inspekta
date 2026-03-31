@@ -117,5 +117,52 @@ export async function fetchGithubCodeStats(input: { url: string; branch?: string
     throw new Error(payload.error ?? "Unable to load code inventory.");
   }
 
-  return payload as GithubCodeStats;
+  return normalizeGithubCodeStats(payload);
+}
+
+function normalizeGithubCodeStats(payload: any): GithubCodeStats {
+  const totals = payload?.totals ?? {
+    lines: Number(payload?.totalLines ?? 0),
+    blanks: 0,
+    comments: 0,
+    linesOfCode: Number(payload?.totalLines ?? 0)
+  };
+
+  return {
+    repo: String(payload?.repo ?? ""),
+    branch: String(payload?.branch ?? "unknown"),
+    totalFiles: Number(payload?.totalFiles ?? 0),
+    rawFileCount: Number(payload?.rawFileCount ?? payload?.totalFiles ?? 0),
+    codeFiles: Number(payload?.codeFiles ?? 0),
+    analyzedFiles: Number(payload?.analyzedFiles ?? 0),
+    truncated: Boolean(payload?.truncated),
+    ignored: Array.isArray(payload?.ignored) ? payload.ignored : [],
+    totals: {
+      lines: Number(totals.lines ?? 0),
+      blanks: Number(totals.blanks ?? 0),
+      comments: Number(totals.comments ?? 0),
+      linesOfCode: Number(totals.linesOfCode ?? totals.lines ?? 0)
+    },
+    languages: Array.isArray(payload?.languages)
+      ? payload.languages.map((item: any) => ({
+          language: String(item?.language ?? "Unknown"),
+          files: Number(item?.files ?? 0),
+          lines: Number(item?.lines ?? 0),
+          blanks: Number(item?.blanks ?? 0),
+          comments: Number(item?.comments ?? 0),
+          linesOfCode: Number(item?.linesOfCode ?? item?.lines ?? 0)
+        }))
+      : [],
+    largestFiles: Array.isArray(payload?.largestFiles)
+      ? payload.largestFiles.map((item: any) => ({
+          path: String(item?.path ?? ""),
+          sha: String(item?.sha ?? ""),
+          language: String(item?.language ?? "Unknown"),
+          lines: Number(item?.lines ?? 0),
+          blanks: Number(item?.blanks ?? 0),
+          comments: Number(item?.comments ?? 0),
+          linesOfCode: Number(item?.linesOfCode ?? item?.lines ?? 0)
+        }))
+      : []
+  };
 }
