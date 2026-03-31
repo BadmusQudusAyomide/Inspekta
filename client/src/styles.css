@@ -625,3 +625,361 @@ code {
     flex-direction: column;
   }
 }
+
+.codeToolShell {
+  min-height: 100vh;
+  color: #edf6ff;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(0, 226, 196, 0.18), transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(255, 167, 38, 0.16), transparent 24%),
+    linear-gradient(145deg, #06131d 0%, #0a1f2d 48%, #102b36 100%);
+}
+
+.codeToolGlow {
+  position: fixed;
+  border-radius: 999px;
+  filter: blur(90px);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.codeToolGlow-one {
+  top: -80px;
+  left: -40px;
+  width: 260px;
+  height: 260px;
+  background: rgba(0, 226, 196, 0.35);
+}
+
+.codeToolGlow-two {
+  right: -60px;
+  bottom: 50px;
+  width: 260px;
+  height: 260px;
+  background: rgba(255, 167, 38, 0.24);
+}
+
+.codeToolPage {
+  position: relative;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 34px 20px 64px;
+}
+
+.codeToolNav,
+.codeToolHeaderCard,
+.codeToolMetric,
+.codeToolPanel,
+.codeToolEmptyCard,
+.codeToolForm {
+  border: 1px solid rgba(183, 234, 255, 0.12);
+  background: rgba(4, 12, 20, 0.66);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(20px);
+}
+
+.codeToolNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 18px;
+  border-radius: 24px;
+}
+
+.codeToolBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.codeToolBrand strong,
+.codeToolBrand small {
+  display: block;
+}
+
+.codeToolBrand small {
+  color: rgba(237, 246, 255, 0.68);
+}
+
+.codeToolBrandMark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #00e2c4, #ffa726);
+  color: #04111a;
+  font-weight: 800;
+}
+
+.codeToolLinks {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.codeToolLink {
+  padding: 10px 14px;
+  border-radius: 999px;
+  text-decoration: none;
+  color: #d7e9f7;
+  border: 1px solid rgba(183, 234, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.codeToolLink.is-active {
+  background: linear-gradient(135deg, rgba(0, 226, 196, 0.2), rgba(255, 167, 38, 0.16));
+  border-color: rgba(0, 226, 196, 0.3);
+}
+
+.codeToolHero {
+  margin-top: 30px;
+  animation: fadeUp 500ms ease;
+}
+
+.codeToolTag,
+.codeToolSectionTag {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  color: #7deedc;
+}
+
+.codeToolHero h1 {
+  max-width: 860px;
+  margin-top: 12px;
+  font-size: clamp(2.8rem, 5vw, 5rem);
+  line-height: 1.02;
+}
+
+.codeToolHero p,
+.codeToolHeaderCard p,
+.codeToolEmptyCard p {
+  color: rgba(237, 246, 255, 0.76);
+}
+
+.codeToolForm {
+  margin-top: 28px;
+  border-radius: 28px;
+  padding: 22px;
+}
+
+.codeToolFormGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.codeToolField {
+  display: grid;
+  gap: 8px;
+}
+
+.codeToolField-wide {
+  grid-column: 1 / -1;
+}
+
+.codeToolField span {
+  color: rgba(237, 246, 255, 0.82);
+}
+
+.codeToolField input {
+  width: 100%;
+  padding: 15px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(183, 234, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+}
+
+.codeToolActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.codeToolActions button {
+  padding: 16px 22px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #00e2c4, #ffa726);
+  color: #04111a;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.codeToolActions button:disabled {
+  opacity: 0.72;
+  cursor: wait;
+}
+
+.codeToolActions small {
+  color: rgba(237, 246, 255, 0.66);
+}
+
+.codeToolError {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 115, 115, 0.35);
+  background: rgba(255, 93, 93, 0.12);
+}
+
+.codeToolResults,
+.codeToolEmpty {
+  margin-top: 34px;
+  animation: fadeUp 650ms ease;
+}
+
+.codeToolHeaderCard {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  border-radius: 28px;
+  padding: 24px;
+}
+
+.codeToolHeaderCard h2 {
+  margin-top: 10px;
+}
+
+.codeToolHeaderMeta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.codeToolStatPill {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #9aeedf;
+}
+
+.codeToolMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.codeToolMetric {
+  border-radius: 24px;
+  padding: 20px;
+}
+
+.codeToolMetric span,
+.codeToolMetric small {
+  display: block;
+}
+
+.codeToolMetric span {
+  color: rgba(237, 246, 255, 0.66);
+}
+
+.codeToolMetric strong {
+  display: block;
+  margin: 10px 0 8px;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.codeToolMetric small {
+  color: rgba(237, 246, 255, 0.6);
+}
+
+.codeToolPanels {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.codeToolPanel {
+  border-radius: 28px;
+  padding: 22px;
+}
+
+.codeToolPanelTitle {
+  margin-bottom: 16px;
+  color: #9aeedf;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+}
+
+.codeToolLanguageList,
+.codeToolFileTable {
+  display: grid;
+  gap: 12px;
+}
+
+.codeToolLanguageRow,
+.codeToolFileRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 0;
+  border-top: 1px solid rgba(183, 234, 255, 0.08);
+}
+
+.codeToolLanguageRow:first-child,
+.codeToolFileRow:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.codeToolLanguageRow strong,
+.codeToolFileRow strong,
+.codeToolLanguageRow small,
+.codeToolFileRow small {
+  display: block;
+}
+
+.codeToolLanguageRow small,
+.codeToolFileRow small {
+  color: rgba(237, 246, 255, 0.62);
+}
+
+.codeToolLanguageMeta,
+.codeToolFileMeta {
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+  text-align: right;
+}
+
+.codeToolFacts {
+  margin: 0;
+  padding-left: 18px;
+  color: rgba(237, 246, 255, 0.84);
+}
+
+.codeToolEmptyCard {
+  border-radius: 28px;
+  padding: 28px;
+}
+
+@media (max-width: 900px) {
+  .codeToolHeaderCard,
+  .codeToolMetricGrid,
+  .codeToolPanels,
+  .codeToolFormGrid {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .codeToolActions,
+  .codeToolNav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

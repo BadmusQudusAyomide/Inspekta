@@ -13,71 +13,95 @@ interface BlobResponse {
   encoding: "base64" | string;
 }
 
-const codeExtensions: Record<string, string> = {
-  ".ts": "TypeScript",
-  ".tsx": "TypeScript",
-  ".js": "JavaScript",
-  ".jsx": "JavaScript",
-  ".mjs": "JavaScript",
-  ".cjs": "JavaScript",
-  ".py": "Python",
-  ".go": "Go",
-  ".rs": "Rust",
-  ".java": "Java",
-  ".kt": "Kotlin",
-  ".php": "PHP",
-  ".rb": "Ruby",
-  ".cs": "C#",
-  ".cpp": "C++",
-  ".cc": "C++",
-  ".c": "C",
-  ".h": "C/C++ Header",
-  ".swift": "Swift",
-  ".scala": "Scala",
-  ".sh": "Shell",
-  ".sql": "SQL",
-  ".html": "HTML",
-  ".css": "CSS",
-  ".scss": "SCSS",
-  ".vue": "Vue",
-  ".svelte": "Svelte",
-  ".json": "JSON",
-  ".yml": "YAML",
-  ".yaml": "YAML",
-  ".toml": "TOML"
+interface RepoResponse {
+  default_branch: string;
+}
+
+interface LanguageConfig {
+  name: string;
+  lineComments?: string[];
+  blockComments?: Array<{ start: string; end: string }>;
+}
+
+interface FileMetrics {
+  path: string;
+  sha: string;
+  language: string;
+  lines: number;
+  blanks: number;
+  comments: number;
+  linesOfCode: number;
+}
+
+const MAX_ANALYZED_FILES = 150;
+
+const languageConfigs: Record<string, LanguageConfig> = {
+  ".ts": { name: "TypeScript", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".tsx": { name: "TypeScript", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".js": { name: "JavaScript", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".jsx": { name: "JavaScript", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".mjs": { name: "JavaScript", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".cjs": { name: "JavaScript", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".py": { name: "Python", lineComments: ["#"] },
+  ".go": { name: "Go", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".rs": { name: "Rust", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".java": { name: "Java", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".kt": { name: "Kotlin", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".php": { name: "PHP", lineComments: ["//", "#"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".rb": { name: "Ruby", lineComments: ["#"] },
+  ".cs": { name: "C#", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".cpp": { name: "C++", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".cc": { name: "C++", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".c": { name: "C", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".h": { name: "C/C++ Header", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".swift": { name: "Swift", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".scala": { name: "Scala", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".sh": { name: "Shell", lineComments: ["#"] },
+  ".sql": { name: "SQL", lineComments: ["--"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".html": { name: "HTML", blockComments: [{ start: "<!--", end: "-->" }] },
+  ".css": { name: "CSS", blockComments: [{ start: "/*", end: "*/" }] },
+  ".scss": { name: "SCSS", lineComments: ["//"], blockComments: [{ start: "/*", end: "*/" }] },
+  ".vue": { name: "Vue", lineComments: ["//"], blockComments: [{ start: "<!--", end: "-->" }, { start: "/*", end: "*/" }] },
+  ".svelte": { name: "Svelte", lineComments: ["//"], blockComments: [{ start: "<!--", end: "-->" }, { start: "/*", end: "*/" }] },
+  ".json": { name: "JSON" },
+  ".yml": { name: "YAML", lineComments: ["#"] },
+  ".yaml": { name: "YAML", lineComments: ["#"] },
+  ".toml": { name: "TOML", lineComments: ["#"] }
 };
 
-export async function analyzeGithubCodeStats(parsedUrl: URL) {
+export async function analyzeGithubCodeStats(
+  parsedUrl: URL,
+  options?: { branch?: string; ignored?: string[] }
+) {
   const [owner, repo] = parsedUrl.pathname.split("/").filter(Boolean);
 
   if (!owner || !repo) {
     throw new Error("GitHub URL must include both owner and repository name.");
   }
 
-  const repoData = await githubFetch<{ default_branch: string }>(`https://api.github.com/repos/${owner}/${repo}`);
+  const repoData = await githubFetch<RepoResponse>(`https://api.github.com/repos/${owner}/${repo}`);
+  const branch = sanitizeBranch(options?.branch) ?? repoData.default_branch;
+  const ignored = normalizeIgnoredPatterns(options?.ignored ?? []);
+
   const tree = await githubFetch<TreeResponse>(
-    `https://api.github.com/repos/${owner}/${repo}/git/trees/${repoData.default_branch}?recursive=1`
+    `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`
   );
 
   const allFiles = tree.tree.filter((item) => item.type === "blob");
-  const codeFiles = allFiles.filter((item) => detectLanguage(item.path));
-  const limitedCodeFiles = codeFiles.slice(0, 80);
-  const fileStats = [];
+  const visibleFiles = allFiles.filter((item) => !shouldIgnorePath(item.path, ignored));
+  const codeFiles = visibleFiles.filter((item) => detectLanguageConfig(item.path));
+  const limitedCodeFiles = codeFiles.slice(0, MAX_ANALYZED_FILES);
+  const fileStats: FileMetrics[] = [];
 
   for (const file of limitedCodeFiles) {
     try {
       const blob = await githubFetch<BlobResponse>(`https://api.github.com/repos/${owner}/${repo}/git/blobs/${file.sha}`);
       const content =
         blob.encoding === "base64" ? Buffer.from(blob.content.replace(/\n/g, ""), "base64").toString("utf8") : blob.content;
-      const language = detectLanguage(file.path);
-      const lines = content ? content.split(/\r?\n/).length : 0;
-
-      fileStats.push({
-        path: file.path,
-        sha: file.sha,
-        language: language ?? "Unknown",
-        lines
-      });
+      const metrics = measureFile(file.path, file.sha, content);
+      if (metrics) {
+        fileStats.push(metrics);
+      }
     } catch (error) {
       if (error instanceof Error && error.message.includes("rate limit")) {
         throw error;
@@ -85,28 +109,53 @@ export async function analyzeGithubCodeStats(parsedUrl: URL) {
     }
   }
 
-  const totalsByLanguage = new Map<string, { language: string; files: number; lines: number }>();
+  const totalsByLanguage = new Map<
+    string,
+    { language: string; files: number; lines: number; blanks: number; comments: number; linesOfCode: number }
+  >();
 
   for (const stat of fileStats) {
-    const existing = totalsByLanguage.get(stat.language) ?? { language: stat.language, files: 0, lines: 0 };
+    const existing = totalsByLanguage.get(stat.language) ?? {
+      language: stat.language,
+      files: 0,
+      lines: 0,
+      blanks: 0,
+      comments: 0,
+      linesOfCode: 0
+    };
+
     existing.files += 1;
     existing.lines += stat.lines;
+    existing.blanks += stat.blanks;
+    existing.comments += stat.comments;
+    existing.linesOfCode += stat.linesOfCode;
     totalsByLanguage.set(stat.language, existing);
   }
 
-  const languages = Array.from(totalsByLanguage.values()).sort((left, right) => right.lines - left.lines);
-  const totalLines = fileStats.reduce((sum, item) => sum + item.lines, 0);
+  const languages = Array.from(totalsByLanguage.values()).sort((left, right) => right.linesOfCode - left.linesOfCode);
+  const totals = fileStats.reduce(
+    (sum, item) => {
+      sum.lines += item.lines;
+      sum.blanks += item.blanks;
+      sum.comments += item.comments;
+      sum.linesOfCode += item.linesOfCode;
+      return sum;
+    },
+    { lines: 0, blanks: 0, comments: 0, linesOfCode: 0 }
+  );
 
   return {
     repo: `${owner}/${repo}`,
-    branch: repoData.default_branch,
-    totalFiles: allFiles.length,
+    branch,
+    totalFiles: visibleFiles.length,
+    rawFileCount: allFiles.length,
     codeFiles: codeFiles.length,
     analyzedFiles: fileStats.length,
-    totalLines,
-    truncated: tree.truncated ?? codeFiles.length > limitedCodeFiles.length,
+    truncated: (tree.truncated ?? false) || codeFiles.length > limitedCodeFiles.length,
+    ignored,
+    totals,
     languages,
-    largestFiles: [...fileStats].sort((left, right) => right.lines - left.lines).slice(0, 10)
+    largestFiles: [...fileStats].sort((left, right) => right.linesOfCode - left.linesOfCode).slice(0, 12)
   };
 }
 
@@ -133,19 +182,137 @@ async function githubFetch<T>(url: string): Promise<T> {
       throw new Error("GitHub denied the code inventory request. Add GITHUB_TOKEN in server/.env for higher API limits.");
     }
 
+    if (response.status === 404) {
+      throw new Error("GitHub could not find that repository or branch.");
+    }
+
     throw new Error(`GitHub request failed with status ${response.status}.`);
   }
 
   return (await response.json()) as T;
 }
 
-function detectLanguage(path: string) {
+function detectLanguageConfig(path: string) {
   const lowerPath = path.toLowerCase();
 
   if (lowerPath.endsWith(".d.ts") || lowerPath.includes(".min.")) {
     return null;
   }
 
-  const extension = Object.keys(codeExtensions).find((ext) => lowerPath.endsWith(ext));
-  return extension ? codeExtensions[extension] : null;
+  const extension = Object.keys(languageConfigs).find((ext) => lowerPath.endsWith(ext));
+  return extension ? languageConfigs[extension] : null;
+}
+
+function measureFile(path: string, sha: string, content: string) {
+  const config = detectLanguageConfig(path);
+  if (!config) {
+    return null;
+  }
+
+  const rows = content.split(/\r?\n/);
+  let blanks = 0;
+  let comments = 0;
+  let linesOfCode = 0;
+  let activeBlock: { start: string; end: string } | null = null;
+
+  for (const row of rows) {
+    const trimmed = row.trim();
+
+    if (!trimmed) {
+      blanks += 1;
+      continue;
+    }
+
+    const analysis = classifyLine(trimmed, config, activeBlock);
+    activeBlock = analysis.activeBlock;
+
+    if (analysis.commentOnly) {
+      comments += 1;
+      continue;
+    }
+
+    linesOfCode += 1;
+  }
+
+  return {
+    path,
+    sha,
+    language: config.name,
+    lines: rows.length,
+    blanks,
+    comments,
+    linesOfCode
+  };
+}
+
+function classifyLine(trimmed: string, config: LanguageConfig, activeBlock: { start: string; end: string } | null) {
+  if (activeBlock) {
+    const endIndex = trimmed.indexOf(activeBlock.end);
+    if (endIndex === -1) {
+      return { commentOnly: true, activeBlock };
+    }
+
+    const after = trimmed.slice(endIndex + activeBlock.end.length).trim();
+    if (!after) {
+      return { commentOnly: true, activeBlock: null };
+    }
+
+    return classifyLine(after, config, null);
+  }
+
+  if (config.lineComments?.some((token) => trimmed.startsWith(token))) {
+    return { commentOnly: true, activeBlock: null };
+  }
+
+  for (const block of config.blockComments ?? []) {
+    if (!trimmed.startsWith(block.start)) {
+      continue;
+    }
+
+    const endIndex = trimmed.indexOf(block.end, block.start.length);
+    if (endIndex === -1) {
+      return { commentOnly: true, activeBlock: block };
+    }
+
+    const after = trimmed.slice(endIndex + block.end.length).trim();
+    if (!after) {
+      return { commentOnly: true, activeBlock: null };
+    }
+
+    return classifyLine(after, config, null);
+  }
+
+  return { commentOnly: false, activeBlock: null };
+}
+
+function normalizeIgnoredPatterns(patterns: string[]) {
+  return patterns
+    .map((pattern) => pattern.trim().replace(/^\/+|\/+$/g, "").toLowerCase())
+    .filter(Boolean);
+}
+
+function shouldIgnorePath(path: string, ignored: string[]) {
+  if (!ignored.length) {
+    return false;
+  }
+
+  const normalizedPath = path.toLowerCase();
+  const segments = normalizedPath.split("/");
+
+  return ignored.some((pattern) => {
+    if (normalizedPath === pattern) {
+      return true;
+    }
+
+    if (normalizedPath.startsWith(`${pattern}/`) || normalizedPath.endsWith(`/${pattern}`)) {
+      return true;
+    }
+
+    return segments.includes(pattern);
+  });
+}
+
+function sanitizeBranch(branch?: string) {
+  const value = branch?.trim();
+  return value ? value : undefined;
 }

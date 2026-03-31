@@ -17,20 +17,33 @@ export interface GithubCodeStats {
   repo: string;
   branch: string;
   totalFiles: number;
+  rawFileCount: number;
   codeFiles: number;
   analyzedFiles: number;
-  totalLines: number;
   truncated: boolean;
+  ignored: string[];
+  totals: {
+    lines: number;
+    blanks: number;
+    comments: number;
+    linesOfCode: number;
+  };
   languages: Array<{
     language: string;
     files: number;
     lines: number;
+    blanks: number;
+    comments: number;
+    linesOfCode: number;
   }>;
   largestFiles: Array<{
     path: string;
     sha: string;
     language: string;
     lines: number;
+    blanks: number;
+    comments: number;
+    linesOfCode: number;
   }>;
 }
 
@@ -90,13 +103,13 @@ export async function loadHistoryIntoState(setHistory: (entries: HistoryEntry[])
   }
 }
 
-export async function fetchGithubCodeStats(url: string) {
+export async function fetchGithubCodeStats(input: { url: string; branch?: string; ignored?: string[] }) {
   const response = await fetch(`${API_BASE}/api/github/code-stats`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ url })
+    body: JSON.stringify(input)
   });
   const payload = await response.json();
 

@@ -69,14 +69,14 @@ app.post("/api/analyze", async (request, response) => {
 
 app.post("/api/github/code-stats", async (request, response) => {
   try {
-    const { url } = request.body as { url?: string };
+    const { url, branch, ignored } = request.body as { url?: string; branch?: string; ignored?: string[] };
     if (!url?.trim()) {
       response.status(400).json({ error: "A GitHub URL is required." });
       return;
     }
 
     const parsedUrl = normalizeGithubUrl(url);
-    const result = await analyzeGithubCodeStats(parsedUrl);
+    const result = await analyzeGithubCodeStats(parsedUrl, { branch, ignored });
     response.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected code stats error.";
