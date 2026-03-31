@@ -49,7 +49,21 @@ export interface GithubAnalysis extends BaseResponse {
     cadence: string;
     singleMaintainerRisk: boolean;
   };
+  scoreBreakdown: {
+    activity: number;
+    documentation: number;
+    community: number;
+    structure: number;
+    overall: number;
+  };
+  topPriority: string;
+  confidence: {
+    level: string;
+    signalCount: number;
+  };
   highlights: string[];
+  keyIssues: string[];
+  quickWins: string[];
   recentCommit: {
     sha: string;
     message: string;
@@ -108,7 +122,14 @@ export interface WebsiteAnalysis extends BaseResponse {
     performance: number;
     overall: number;
   };
+  topPriority: string;
+  confidence: {
+    level: string;
+    signalCount: number;
+  };
   highlights: string[];
+  keyIssues: string[];
+  quickWins: string[];
 }
 
 export type AnalyzeResponse = GithubAnalysis | WebsiteAnalysis;

@@ -109,10 +109,42 @@ export async function analyzeWebsite(parsedUrl: URL) {
       technologies,
       performanceHints,
       scores,
+      topPriority: buildTopPriority(buildWebsiteIssues({
+        loadTimeMs,
+        seo,
+        technologies
+      }), buildWebsiteQuickWins({
+        loadTimeMs,
+        seo,
+        pageSizeKb
+      })),
+      confidence: buildConfidence([
+        title.length > 0,
+        metaDescription.length > 0,
+        seo.canonicalPresent,
+        seo.headings.h1 >= 0,
+        seo.headings.h2 >= 0,
+        seo.og.title,
+        seo.og.description,
+        seo.og.image,
+        technologies.length > 0,
+        pageSizeKb >= 0,
+        loadTimeMs >= 0
+      ]),
       highlights: buildWebsiteHighlights({
         technologies,
         scores,
         seo
+      }),
+      keyIssues: buildWebsiteIssues({
+        loadTimeMs,
+        seo,
+        technologies
+      }),
+      quickWins: buildWebsiteQuickWins({
+        loadTimeMs,
+        seo,
+        pageSizeKb
       })
     };
   } finally {
@@ -181,11 +213,13 @@ function buildPerformanceHints(input: {
   const hints: string[] = [];
 
   if (input.loadTimeMs > 4000) {
-    hints.push("Page load is on the slow side. Review render-blocking scripts and media weight.");
+    hints.push("Load time is slow. Review render-blocking scripts and heavy media.");
+  } else if (input.loadTimeMs > 3000) {
+    hints.push("Load time is slow and should be pushed closer to 3 seconds.");
   } else if (input.loadTimeMs > 2000) {
-    hints.push("Load time is decent, but there is room to tighten initial response and asset delivery.");
+    hints.push("Load time is good, but there is room to push it below 2 seconds.");
   } else {
-    hints.push("Load time looks healthy for a quick first-pass inspection.");
+    hints.push("Load time is fast enough for a healthy first impression.");
   }
 
   if (input.pageSizeKb > 1500) {
@@ -224,33 +258,49 @@ function buildWebsiteScores(input: {
     og: { title: boolean; description: boolean; image: boolean; values: { title: string | null; description: string | null; image: string | null } };
   };
 }) {
-  let seoScore = 30;
-  if (input.seo.titlePresent) seoScore += 20;
-  if (input.seo.titleLength >= 20 && input.seo.titleLength <= 70) seoScore += 10;
-  if (input.seo.metaDescriptionPresent) seoScore += 20;
-  if (input.seo.descriptionLength >= 70 && input.seo.descriptionLength <= 170) seoScore += 10;
-  if (input.seo.canonicalPresent) seoScore += 10;
-  if (input.seo.headings.h1 === 1) seoScore += 10;
-  if (input.seo.headings.h2 >= 1) seoScore += 10;
+  let seoScore = 0;
+  if (input.seo.titlePresent) seoScore += 18;
+  if (input.seo.titleLength >= 20 && input.seo.titleLength <= 70) seoScore += 12;
+  else if (input.seo.titlePresent) seoScore += 4;
+  if (input.seo.metaDescriptionPresent) seoScore += 16;
+  if (input.seo.descriptionLength >= 70 && input.seo.descriptionLength <= 170) seoScore += 12;
+  else if (input.seo.metaDescriptionPresent) seoScore += 4;
+  if (input.seo.canonicalPresent) seoScore += 12;
+  if (input.seo.headings.h1 === 1) seoScore += 16;
+  else if (input.seo.headings.h1 > 1) seoScore -= 8;
+  if (input.seo.headings.h2 >= 2) seoScore += 14;
+  else if (input.seo.headings.h2 === 1) seoScore += 8;
+  else seoScore -= 6;
+  if (!input.seo.titlePresent) seoScore -= 12;
+  if (!input.seo.metaDescriptionPresent) seoScore -= 12;
+  if (!input.seo.canonicalPresent) seoScore -= 8;
+  seoScore = clampScore(seoScore);
 
-  let socialScore = 30;
-  if (input.seo.og.title) socialScore += 25;
-  if (input.seo.og.description) socialScore += 25;
-  if (input.seo.og.image) socialScore += 20;
+  let socialScore = 0;
+  if (input.seo.og.title) socialScore += 30;
+  if (input.seo.og.description) socialScore += 30;
+  if (input.seo.og.image) socialScore += 30;
+  if (!input.seo.og.title) socialScore -= 10;
+  if (!input.seo.og.description) socialScore -= 10;
+  if (!input.seo.og.image) socialScore -= 20;
+  socialScore = clampScore(socialScore);
 
   let performanceScore = 100;
-  if (input.loadTimeMs > 2000) performanceScore -= 15;
-  if (input.loadTimeMs > 4000) performanceScore -= 20;
-  if (input.pageSizeKb > 500) performanceScore -= 10;
-  if (input.pageSizeKb > 1500) performanceScore -= 15;
-  performanceScore = Math.max(25, performanceScore);
+  if (input.loadTimeMs > 1500) performanceScore -= 10;
+  if (input.loadTimeMs > 2500) performanceScore -= 15;
+  if (input.loadTimeMs > 4000) performanceScore -= 25;
+  if (input.loadTimeMs > 7000) performanceScore -= 20;
+  if (input.pageSizeKb > 300) performanceScore -= 8;
+  if (input.pageSizeKb > 800) performanceScore -= 15;
+  if (input.pageSizeKb > 1500) performanceScore -= 20;
+  performanceScore = clampScore(performanceScore);
 
-  const overall = Math.round((seoScore + socialScore + performanceScore) / 3);
+  const overall = Math.round(seoScore * 0.4 + socialScore * 0.2 + performanceScore * 0.4);
 
   return {
-    seo: Math.min(100, seoScore),
-    social: Math.min(100, socialScore),
-    performance: Math.min(100, performanceScore),
+    seo: seoScore,
+    social: socialScore,
+    performance: performanceScore,
     overall
   };
 }
@@ -269,26 +319,103 @@ function buildWebsiteHighlights(input: {
   const highlights: string[] = [];
 
   if (input.technologies.length) {
-    highlights.push(`Detected stack signals include ${input.technologies.slice(0, 4).join(", ")}.`);
+    highlights.push(`The page exposes a recognizable stack: ${input.technologies.slice(0, 4).join(", ")}.`);
   } else {
-    highlights.push("No strong framework or analytics fingerprints were visible in the fetched markup.");
+    highlights.push("No clear frontend framework was detected from the markup. This may be due to server-side rendering, minimal client-side scripts, or limited fingerprint signals.");
   }
 
-  highlights.push(`SEO score is ${input.scores.seo}/100 and social-card score is ${input.scores.social}/100.`);
+  if (input.scores.overall >= 80) {
+    highlights.push(`This is a strong surface-level website pass at ${input.scores.overall}/100.`);
+  } else if (input.scores.overall >= 55) {
+    highlights.push(`This site is serviceable, but the audit still found noticeable quality gaps at ${input.scores.overall}/100.`);
+  } else {
+    highlights.push(`This site underperforms on the basics, landing only ${input.scores.overall}/100.`);
+  }
 
   if (!input.seo.metaDescriptionPresent || !input.seo.canonicalPresent) {
-    highlights.push("Core metadata can be tightened with a stronger description and canonical setup.");
+    highlights.push("Core metadata is weak. Missing description or canonical tags make search presentation feel under-managed.");
   }
 
   if (input.seo.headings.h1 !== 1) {
-    highlights.push("Heading structure looks unusual because the page does not have exactly one H1.");
+    highlights.push("Heading hierarchy is messy because the page does not present a clean single-H1 structure.");
   }
 
   if (!input.seo.og.image) {
-    highlights.push("Open Graph image is missing, so link previews may feel incomplete.");
+    highlights.push("Social sharing is undercooked because the Open Graph image is missing.");
   }
 
   return highlights;
+}
+
+function buildWebsiteIssues(input: {
+  loadTimeMs: number;
+  seo: {
+    titlePresent: boolean;
+    metaDescriptionPresent: boolean;
+    canonicalPresent: boolean;
+    headings: { h1: number; h2: number; h3: number; samples: { h1: string[]; h2: string[]; h3: string[] } };
+    og: { title: boolean; description: boolean; image: boolean; values: { title: string | null; description: string | null; image: string | null } };
+  };
+  technologies: string[];
+}) {
+  const issues: string[] = [];
+
+  if (input.loadTimeMs > 3000) {
+    issues.push(`Load time is slow at roughly ${(input.loadTimeMs / 1000).toFixed(1)}s.`);
+  }
+
+  if (input.seo.headings.h1 !== 1) {
+    issues.push(`Heading structure is inconsistent because ${input.seo.headings.h1} H1 tags were detected.`);
+  }
+
+  if (!input.seo.metaDescriptionPresent) {
+    issues.push("Meta description is missing, which weakens search result previews.");
+  }
+
+  if (!input.seo.og.image) {
+    issues.push("Open Graph image is missing, so shared links may look incomplete.");
+  }
+
+  if (!input.technologies.some((item) => item.includes("Analytics"))) {
+    issues.push("No analytics fingerprint was detected, which may be intentional but leaves less product insight.");
+  }
+
+  return issues.slice(0, 5);
+}
+
+function buildWebsiteQuickWins(input: {
+  loadTimeMs: number;
+  pageSizeKb: number;
+  seo: {
+    metaDescriptionPresent: boolean;
+    canonicalPresent: boolean;
+    headings: { h1: number; h2: number; h3: number; samples: { h1: string[]; h2: string[]; h3: string[] } };
+    og: { title: boolean; description: boolean; image: boolean; values: { title: string | null; description: string | null; image: string | null } };
+  };
+}) {
+  const quickWins: string[] = [];
+
+  if (input.loadTimeMs > 3000) {
+    quickWins.push("Reduce render-blocking assets and heavy media to push load time below 3 seconds.");
+  }
+
+  if (input.pageSizeKb > 800) {
+    quickWins.push("Trim page weight with compression, image optimization, and lazy loading.");
+  }
+
+  if (input.seo.headings.h1 !== 1) {
+    quickWins.push("Fix heading hierarchy so the page uses exactly one H1.");
+  }
+
+  if (!input.seo.metaDescriptionPresent || !input.seo.canonicalPresent) {
+    quickWins.push("Tighten search metadata with a proper description and canonical tag.");
+  }
+
+  if (!input.seo.og.image) {
+    quickWins.push("Add an Open Graph image to improve social previews.");
+  }
+
+  return quickWins.slice(0, 5);
 }
 
 async function summarizeWebsite(input: {
@@ -354,7 +481,40 @@ function buildHeuristicWebsiteSummary(input: {
         : "social sharing"
   }.`;
 
-  return `${input.title || input.hostname} was inspected. ${stackLine} ${healthLine}`.trim();
+  const verdictLine =
+    input.scores.overall >= 80
+      ? "It looks well maintained from the outside."
+      : input.scores.overall >= 55
+        ? "It works, but the polish is uneven."
+        : "It feels under-optimized and under-curated.";
+
+  return `${input.title || input.hostname} was inspected. ${stackLine} ${healthLine} ${verdictLine}`.trim();
+}
+
+function clampScore(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function buildTopPriority(issues: string[], quickWins: string[]) {
+  if (issues[0]) {
+    return issues[0];
+  }
+
+  if (quickWins[0]) {
+    return quickWins[0];
+  }
+
+  return "No urgent issue stood out from the current signal set.";
+}
+
+function buildConfidence(signals: boolean[]) {
+  const signalCount = signals.filter(Boolean).length;
+  const level = signalCount >= 9 ? "High" : signalCount >= 6 ? "Medium" : "Low";
+
+  return {
+    level,
+    signalCount
+  };
 }
 
 function resolveAssetUrl(baseUrl: URL, assetUrl: string | null) {

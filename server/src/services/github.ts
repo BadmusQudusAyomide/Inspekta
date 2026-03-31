@@ -37,15 +37,17 @@ export async function analyzeGithubRepo(parsedUrl: URL) {
   }
 
   const repoData = await githubFetch<RepoApiResponse>(`https://api.github.com/repos/${owner}/${repo}`);
-  const [readmeText, contributors, commits, contents, languages] = await Promise.all([
+  const [readmeText, contributors, commits, contents, languages, manifestCorpus] = await Promise.all([
     fetchReadme(owner, repo),
     fetchContributors(owner, repo),
     githubFetch<CommitResponse[]>(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=1`),
     githubFetch<Array<{ name: string }>>(`https://api.github.com/repos/${owner}/${repo}/contents`),
-    githubFetch<Record<string, number>>(`https://api.github.com/repos/${owner}/${repo}/languages`)
+    githubFetch<Record<string, number>>(`https://api.github.com/repos/${owner}/${repo}/languages`),
+    fetchManifestCorpus(owner, repo)
   ]);
 
-  const techStack = inferRepoStack(readmeText, contents.map((item) => item.name));
+  const techStack = inferRepoStack(readmeText, contents.map((item) => item.name), manifestCorpus);
+  const rootFiles = contents.map((item) => item.name);
   const readmeScore = scoreReadme(readmeText);
   const activity = getRepoActivity({
     pushedAt: repoData.pushed_at,
@@ -53,18 +55,24 @@ export async function analyzeGithubRepo(parsedUrl: URL) {
     openIssues: repoData.open_issues_count,
     contributors
   });
+  const repoSignals = getRepoSignals({
+    rootFiles,
+    manifestCorpus,
+    techStack,
+    contributors,
+    stars: repoData.stargazers_count,
+    openIssues: repoData.open_issues_count,
+    readmeScore,
+    activity,
+    hasLicense: Boolean(repoData.license?.name)
+  });
   const summary = await summarizeProject({
     repo: `${owner}/${repo}`,
     description: repoData.description,
     readmeText,
     techStack
   });
-  const vitality = getRepoVitality({
-    pushedAt: repoData.pushed_at,
-    stars: repoData.stargazers_count,
-    openIssues: repoData.open_issues_count,
-    contributors
-  });
+  const vitality = getRepoVitality(repoSignals, activity);
   const recentCommit = commits[0]
     ? {
         sha: commits[0].sha,
@@ -78,6 +86,27 @@ export async function analyzeGithubRepo(parsedUrl: URL) {
     .sort((left, right) => right[1] - left[1])
     .map(([name]) => name)
     .slice(0, 6);
+
+  const hasCI = /github\/workflows|actions\/checkout/i.test(manifestCorpus);
+  const hasTests = /(jest|vitest|mocha|pytest|rspec|cypress|playwright|testing-library|tests?\/|__tests__)/i.test(
+    `${rootFiles.join("\n")}\n${manifestCorpus}`
+  );
+  const keyIssues = buildRepoIssues({
+    activity,
+    repoSignals,
+    hasLicense: Boolean(repoData.license?.name),
+    readmeVerdict: readmeScore.verdict,
+    hasTests,
+    hasCI
+  });
+  const quickWins = buildRepoQuickWins({
+    activity,
+    repoSignals,
+    hasLicense: Boolean(repoData.license?.name),
+    readmeVerdict: readmeScore.verdict,
+    hasTests,
+    hasCI
+  });
 
   return {
     repo: {
@@ -106,6 +135,20 @@ export async function analyzeGithubRepo(parsedUrl: URL) {
     readmeScore,
     vitality,
     activity,
+    scoreBreakdown: repoSignals,
+    topPriority: buildTopPriority(keyIssues, quickWins),
+    confidence: buildConfidence([
+      Boolean(repoData.description),
+      Boolean(readmeText),
+      contributors > 0,
+      repoData.open_issues_count >= 0,
+      repoData.stargazers_count >= 0,
+      Boolean(repoData.license?.name),
+      languageBreakdown.length > 0,
+      techStack.length > 0,
+      hasTests,
+      hasCI
+    ]),
     highlights: buildRepoHighlights({
       archived: repoData.archived,
       vitalityStatus: vitality.status,
@@ -114,6 +157,8 @@ export async function analyzeGithubRepo(parsedUrl: URL) {
       openIssues: repoData.open_issues_count,
       languageBreakdown
     }),
+    keyIssues,
+    quickWins,
     recentCommit
   };
 }
@@ -163,8 +208,43 @@ async function fetchContributors(owner: string, repo: string) {
   return contributors.length;
 }
 
-function inferRepoStack(readmeText: string, rootFiles: string[]) {
-  const corpus = `${readmeText}\n${rootFiles.join("\n")}`.toLowerCase();
+async function fetchManifestCorpus(owner: string, repo: string) {
+  const manifestPaths = [
+    "package.json",
+    "requirements.txt",
+    "pyproject.toml",
+    "go.mod",
+    "Cargo.toml",
+    "composer.json",
+    "Gemfile",
+    "Dockerfile",
+    ".github/workflows/ci.yml",
+    ".github/workflows/main.yml"
+  ];
+  const manifestContents = await Promise.all(
+    manifestPaths.map((path) => fetchOptionalRepoFile(owner, repo, path))
+  );
+
+  return manifestContents.filter(Boolean).join("\n");
+}
+
+async function fetchOptionalRepoFile(owner: string, repo: string, path: string) {
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+    headers: {
+      Accept: "application/vnd.github.raw+json",
+      "User-Agent": "Inspekta"
+    }
+  });
+
+  if (!response.ok) {
+    return "";
+  }
+
+  return response.text();
+}
+
+function inferRepoStack(readmeText: string, rootFiles: string[], manifestCorpus: string) {
+  const corpus = `${readmeText}\n${rootFiles.join("\n")}\n${manifestCorpus}`.toLowerCase();
   const pairs: Array<[string, string[]]> = [
     ["TypeScript", ["typescript", "tsconfig.json"]],
     ["JavaScript", ["javascript", "package.json"]],
@@ -183,7 +263,12 @@ function inferRepoStack(readmeText: string, rootFiles: string[]) {
     ["MongoDB", ["mongodb", "mongoose"]],
     ["Tailwind CSS", ["tailwind"]],
     ["Prisma", ["prisma"]],
-    ["GraphQL", ["graphql"]]
+    ["GraphQL", ["graphql"]],
+    ["Ruby", ["gemfile", "ruby"]],
+    ["Rails", ["rails"]],
+    ["PHP", ["composer.json", "php"]],
+    ["Laravel", ["laravel"]],
+    ["CI", ["github/workflows", "actions/checkout", "build", "test"]]
   ];
 
   return pairs
@@ -247,34 +332,45 @@ function scoreReadme(readmeText: string) {
   };
 }
 
-function getRepoVitality(input: {
-  pushedAt: string;
-  stars: number;
-  openIssues: number;
-  contributors: number;
-}) {
-  const lastPush = new Date(input.pushedAt).getTime();
-  const ageDays = Math.max(0, Math.round((Date.now() - lastPush) / (1000 * 60 * 60 * 24)));
-
-  let score = 100;
-  if (ageDays > 30) score -= 15;
-  if (ageDays > 90) score -= 25;
-  if (ageDays > 180) score -= 20;
-  if (input.openIssues > 200) score -= 10;
-  if (input.contributors <= 1) score -= 5;
-  if (input.stars === 0) score -= 5;
-  if (input.stars > 1000) score += 5;
-
-  score = Math.max(5, Math.min(100, score));
+function getRepoVitality(
+  scores: { activity: number; documentation: number; community: number; structure: number; overall: number },
+  activity: { daysSincePush: number; issuePressure: string; singleMaintainerRisk: boolean }
+) {
+  const score = scores.overall;
 
   const status =
-    score >= 75 ? "Alive and active" : score >= 50 ? "Maintained with caution" : "Possibly stale";
-  const reason =
-    ageDays <= 30
-      ? "Recent activity suggests the project is actively maintained."
-      : ageDays <= 90
-        ? "The repo has moved recently, but not extremely often."
-        : "The repo has been quiet for a while, so maintenance may be slowing down.";
+    score >= 80 ? "Healthy" : score >= 60 ? "Watch closely" : score >= 35 ? "Fragile" : "Barely maintained";
+  const reasons: string[] = [];
+
+  if (activity.daysSincePush <= 14) {
+    reasons.push("recent commits are a strong positive signal");
+  } else if (activity.daysSincePush > 90) {
+    reasons.push("commit activity has slowed down");
+  } else {
+    reasons.push("activity is present but not especially fresh");
+  }
+
+  if (activity.issuePressure === "High") {
+    reasons.push("the open issue backlog is heavy");
+  } else if (activity.issuePressure === "Moderate") {
+    reasons.push("issue volume is starting to build up");
+  }
+
+  if (activity.singleMaintainerRisk) {
+    reasons.push("maintenance appears concentrated in one person");
+  }
+
+  if (scores.documentation < 45) {
+    reasons.push("documentation quality is weak");
+  }
+
+  if (scores.structure < 45) {
+    reasons.push("engineering signals like tests or CI are thin");
+  }
+
+  const reason = reasons.length
+    ? `${status} because ${reasons.join(", ")}.`
+    : `${status} with balanced activity, issue load, and contributor coverage.`;
 
   return { status, score, reason };
 }
@@ -288,8 +384,9 @@ function getRepoActivity(input: {
   const now = Date.now();
   const daysSincePush = Math.max(0, Math.round((now - new Date(input.pushedAt).getTime()) / (1000 * 60 * 60 * 24)));
   const repoAgeDays = Math.max(1, Math.round((now - new Date(input.createdAt).getTime()) / (1000 * 60 * 60 * 24)));
+  const issuesPerContributor = input.openIssues / Math.max(1, input.contributors);
   const issuePressure =
-    input.openIssues > 200 ? "High" : input.openIssues > 50 ? "Moderate" : "Low";
+    issuesPerContributor > 80 ? "High" : issuesPerContributor > 20 ? "Moderate" : "Low";
   const cadence =
     daysSincePush <= 14
       ? "Fresh activity"
@@ -308,6 +405,67 @@ function getRepoActivity(input: {
   };
 }
 
+function getRepoSignals(input: {
+  rootFiles: string[];
+  manifestCorpus: string;
+  techStack: string[];
+  contributors: number;
+  stars: number;
+  openIssues: number;
+  readmeScore: { score: number; maxScore: number };
+  activity: { daysSincePush: number };
+  hasLicense: boolean;
+}) {
+  const hasTests = /(jest|vitest|mocha|pytest|rspec|cypress|playwright|testing-library|tests?\/|__tests__)/i.test(
+    `${input.rootFiles.join("\n")}\n${input.manifestCorpus}`
+  );
+  const hasCI = /(github\/workflows|actions\/checkout|ci:|build:|test:)/i.test(input.manifestCorpus);
+
+  let activityScore = 100;
+  if (input.activity.daysSincePush > 14) activityScore -= 10;
+  if (input.activity.daysSincePush > 45) activityScore -= 20;
+  if (input.activity.daysSincePush > 90) activityScore -= 20;
+  if (input.activity.daysSincePush > 180) activityScore -= 20;
+  if (input.openIssues > 50) activityScore -= 10;
+  if (input.openIssues > 150) activityScore -= 15;
+
+  let documentationScore = Math.round((input.readmeScore.score / input.readmeScore.maxScore) * 100);
+  if (input.hasLicense) documentationScore += 10;
+  documentationScore = clampScore(documentationScore);
+
+  let communityScore = 20;
+  if (input.contributors > 1) communityScore += 20;
+  if (input.contributors > 3) communityScore += 15;
+  if (input.stars > 0) communityScore += 15;
+  if (input.stars > 25) communityScore += 10;
+  if (input.stars > 250) communityScore += 10;
+  if (input.openIssues > 100) communityScore -= 10;
+  if (input.openIssues > 250) communityScore -= 10;
+  communityScore = clampScore(communityScore);
+
+  let structureScore = 20;
+  if (input.techStack.length >= 2) structureScore += 15;
+  if (hasTests) structureScore += 30;
+  if (hasCI) structureScore += 25;
+  if (input.hasLicense) structureScore += 10;
+  structureScore = clampScore(structureScore);
+
+  const overall = Math.round(
+    activityScore * 0.4 +
+      documentationScore * 0.2 +
+      communityScore * 0.2 +
+      structureScore * 0.2
+  );
+
+  return {
+    activity: clampScore(activityScore),
+    documentation: clampScore(documentationScore),
+    community: clampScore(communityScore),
+    structure: clampScore(structureScore),
+    overall
+  };
+}
+
 function buildRepoHighlights(input: {
   archived: boolean;
   vitalityStatus: string;
@@ -321,25 +479,97 @@ function buildRepoHighlights(input: {
   if (input.archived) {
     highlights.push("This repository is archived, so new development is likely paused.");
   } else {
-    highlights.push(`Project status reads as ${input.vitalityStatus.toLowerCase()}.`);
+    highlights.push(`Maintenance outlook is ${input.vitalityStatus.toLowerCase()}.`);
   }
 
-  highlights.push(`README quality is ${input.readmeVerdict.toLowerCase()}, which affects onboarding confidence.`);
+  highlights.push(`README quality is ${input.readmeVerdict.toLowerCase()}, so onboarding is ${input.readmeVerdict === "Weak" ? "rough" : input.readmeVerdict === "Fair" ? "adequate but not strong" : "in decent shape"}.`);
   highlights.push(
     input.contributors <= 1
-      ? "Contributor footprint is tiny, so maintenance may depend on one person."
-      : `Contributor footprint spans ${input.contributors} public contributors.`
+      ? "Contributor footprint is thin enough to create real bus-factor risk."
+      : `Contributor footprint spans ${input.contributors} public contributors, which lowers single-maintainer risk.`
   );
 
   if (input.openIssues > 200) {
-    highlights.push("Open issue volume is heavy, which may indicate backlog pressure.");
+    highlights.push("Open issue volume is high enough to suggest backlog drag rather than healthy throughput.");
+  } else if (input.openIssues > 50) {
+    highlights.push("The issue queue is noticeable, so responsiveness may already be slipping.");
   }
 
   if (input.languageBreakdown.length) {
-    highlights.push(`Language mix is led by ${input.languageBreakdown.slice(0, 3).join(", ")}.`);
+    highlights.push(`The codebase is led by ${input.languageBreakdown.slice(0, 3).join(", ")}.`);
   }
 
   return highlights;
+}
+
+function buildRepoIssues(input: {
+  activity: { daysSincePush: number; issuePressure: string; singleMaintainerRisk: boolean };
+  repoSignals: { documentation: number; structure: number; community: number };
+  hasLicense: boolean;
+  readmeVerdict: string;
+  hasTests: boolean;
+  hasCI: boolean;
+}) {
+  const issues: string[] = [];
+
+  if (input.activity.daysSincePush > 90) {
+    issues.push("Recent activity is weak, so maintenance confidence is low.");
+  }
+
+  if (input.readmeVerdict === "Weak" || input.repoSignals.documentation < 45) {
+    issues.push("Documentation is thin, which makes onboarding and reuse harder.");
+  }
+
+  if (input.activity.singleMaintainerRisk) {
+    issues.push("Maintainer depth is shallow, creating real bus-factor risk.");
+  }
+
+  if (!input.hasTests) {
+    issues.push("No clear test tooling was detected, so quality checks may be fragile.");
+  }
+
+  if (!input.hasCI) {
+    issues.push("No obvious CI pipeline was detected, so release discipline may be manual.");
+  }
+
+  if (!input.hasLicense) {
+    issues.push("No license is visible, which makes reuse riskier.");
+  }
+
+  return issues.slice(0, 5);
+}
+
+function buildRepoQuickWins(input: {
+  activity: { daysSincePush: number; issuePressure: string; singleMaintainerRisk: boolean };
+  repoSignals: { documentation: number; structure: number; community: number };
+  hasLicense: boolean;
+  readmeVerdict: string;
+  hasTests: boolean;
+  hasCI: boolean;
+}) {
+  const quickWins: string[] = [];
+
+  if (input.readmeVerdict === "Weak" || input.repoSignals.documentation < 45) {
+    quickWins.push("Expand the README with setup, usage, and contribution guidance.");
+  }
+
+  if (!input.hasTests) {
+    quickWins.push("Add a visible test setup so contributors can trust changes faster.");
+  }
+
+  if (!input.hasCI) {
+    quickWins.push("Add a CI workflow to validate builds and tests on every push.");
+  }
+
+  if (!input.hasLicense) {
+    quickWins.push("Add an explicit license file if the project is meant to be reused.");
+  }
+
+  if (input.activity.singleMaintainerRisk) {
+    quickWins.push("Reduce maintainer concentration by documenting ownership and review flow.");
+  }
+
+  return quickWins.slice(0, 5);
 }
 
 async function summarizeProject(input: {
@@ -390,9 +620,65 @@ function buildHeuristicSummary(input: {
   techStack: string[];
 }) {
   const firstHeadingMatch = input.readmeText.match(/^#\s+(.+)$/m);
-  const heading = firstHeadingMatch?.[1];
-  const description = input.description ?? "This repository does not provide a GitHub description.";
-  const stack = input.techStack.length ? `Likely built with ${input.techStack.join(", ")}.` : "Its stack is not obvious from the repo surface.";
+  const heading = cleanPhrase(firstHeadingMatch?.[1] ?? "");
+  const focusSentence = input.description?.trim()
+    ? `GitHub describes this project as: ${ensureSentence(input.description.trim())}`
+    : isUsefulHeading(heading)
+      ? `This repository appears to focus on ${heading}.`
+      : "No clear project description was provided.";
+  const stackSentence = input.techStack.length
+    ? `Primary technologies include ${input.techStack.join(", ")}.`
+    : "The primary stack is not obvious from the repo surface.";
 
-  return `${heading ? `${heading} appears to be the focus of ${input.repo}. ` : ""}${description} ${stack}`.trim();
+  return `${focusSentence} ${stackSentence}`.trim();
+}
+
+function cleanPhrase(value: string) {
+  return value
+    .replace(/^#+\s*/, "")
+    .replace(/[.]+$/, "")
+    .trim();
+}
+
+function isUsefulHeading(value: string) {
+  const cleaned = value.trim().toLowerCase();
+  if (!cleaned) {
+    return false;
+  }
+
+  if (cleaned.length < 4) {
+    return false;
+  }
+
+  return !["or", "and", "app", "project", "repo", "repository", "home"].includes(cleaned);
+}
+
+function ensureSentence(value: string) {
+  return /[.!?]$/.test(value) ? value : `${value}.`;
+}
+
+function clampScore(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function buildTopPriority(issues: string[], quickWins: string[]) {
+  if (issues[0]) {
+    return issues[0];
+  }
+
+  if (quickWins[0]) {
+    return quickWins[0];
+  }
+
+  return "No urgent issue stood out from the current signal set.";
+}
+
+function buildConfidence(signals: boolean[]) {
+  const signalCount = signals.filter(Boolean).length;
+  const level = signalCount >= 8 ? "High" : signalCount >= 5 ? "Medium" : "Low";
+
+  return {
+    level,
+    signalCount
+  };
 }

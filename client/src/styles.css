@@ -61,7 +61,33 @@ input {
   padding: 48px 20px 64px;
 }
 
+.topNav {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.navAnchor {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f9f5ef;
+  text-decoration: none;
+}
+
+.navAnchor.is-active {
+  background: linear-gradient(135deg, rgba(255, 208, 91, 0.18), rgba(255, 141, 102, 0.18));
+  border-color: rgba(255, 208, 91, 0.3);
+}
+
 .hero {
+  animation: fadeUp 500ms ease;
+}
+
+.codeHero {
   animation: fadeUp 500ms ease;
 }
 
@@ -171,6 +197,136 @@ h1 {
   border: 1px solid rgba(255, 177, 156, 0.45);
 }
 
+.historyStrip {
+  margin-top: 22px;
+}
+
+.historyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.historyGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.historyCard,
+.ghostButton,
+.historyOpenButton {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f9f5ef;
+}
+
+.historyCard {
+  padding: 14px;
+  border-radius: 18px;
+  text-align: left;
+}
+
+.historyScoreRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.historyScore {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  font-size: 1.1rem;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.historyScoreText small {
+  margin-top: 2px;
+}
+
+.historyScore-good {
+  color: #7ae3ab;
+  background: rgba(81, 211, 146, 0.14);
+}
+
+.historyScore-caution {
+  color: #ffd773;
+  background: rgba(243, 201, 105, 0.14);
+}
+
+.historyScore-danger {
+  color: #ff9d96;
+  background: rgba(255, 123, 114, 0.14);
+}
+
+.historyScore-neutral {
+  color: rgba(249, 245, 239, 0.75);
+}
+
+.historyCard span,
+.historyCard small {
+  display: block;
+}
+
+.historyCard span {
+  margin-bottom: 6px;
+  color: #f6d28b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+}
+
+.historyCard strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.historyMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.historyCard small {
+  color: rgba(249, 245, 239, 0.68);
+  word-break: break-word;
+}
+
+.ghostButton {
+  padding: 10px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.historyOpenButton {
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.favoriteButton {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f9f5ef;
+  cursor: pointer;
+}
+
+.favoriteButton.is-favorite {
+  background: rgba(255, 208, 91, 0.18);
+  color: #ffe6a1;
+  border-color: rgba(255, 208, 91, 0.35);
+}
+
 .dashboard,
 .emptyState {
   margin-top: 34px;
@@ -185,8 +341,22 @@ h1 {
   margin-bottom: 18px;
 }
 
+.headerMeta {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
 .timestamp {
   color: rgba(249, 245, 239, 0.7);
+}
+
+.confidenceBadge {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f6d28b;
+  font-size: 0.88rem;
 }
 
 .grid {
@@ -254,9 +424,39 @@ h1 {
   font-size: 0.75rem;
 }
 
+.inventoryActions {
+  margin-top: 14px;
+}
+
+.codeTable {
+  display: grid;
+  gap: 12px;
+}
+
+.codeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.codeRow:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.codeRowMeta {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+}
+
 .metricCard {
   border-radius: 22px;
   padding: 20px;
+  border-left: 4px solid rgba(255, 255, 255, 0.12);
 }
 
 .metricCard span {
@@ -267,6 +467,49 @@ h1 {
 
 .metricCard strong {
   font-size: 1.3rem;
+}
+
+.metricHelper {
+  display: block;
+  margin-top: 8px;
+  color: rgba(249, 245, 239, 0.66);
+}
+
+.metricCard-good {
+  border-left-color: #51d392;
+  background:
+    linear-gradient(180deg, rgba(81, 211, 146, 0.15), transparent 70%),
+    rgba(8, 15, 27, 0.72);
+}
+
+.metricCard-caution {
+  border-left-color: #f3c969;
+  background:
+    linear-gradient(180deg, rgba(243, 201, 105, 0.15), transparent 70%),
+    rgba(8, 15, 27, 0.72);
+}
+
+.metricCard-danger {
+  border-left-color: #ff7b72;
+  background:
+    linear-gradient(180deg, rgba(255, 123, 114, 0.16), transparent 70%),
+    rgba(8, 15, 27, 0.72);
+}
+
+.toneText {
+  font-weight: 700;
+}
+
+.tone-good {
+  color: #7ae3ab;
+}
+
+.tone-caution {
+  color: #ffd773;
+}
+
+.tone-danger {
+  color: #ff9d96;
 }
 
 .verdictRow {
@@ -362,6 +605,7 @@ code {
 
 @media (max-width: 900px) {
   .heroGrid,
+  .historyGrid,
   .grid-two,
   .grid-three,
   .grid-four,
