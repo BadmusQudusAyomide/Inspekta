@@ -10,9 +10,20 @@ dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT ?? 8787);
-const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
+const allowedOrigins = parseAllowedOrigins(process.env.CLIENT_ORIGIN ?? "http://localhost:5173");
 
-app.use(cors({ origin: clientOrigin }));
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || isAllowedOrigin(origin, allowedOrigins)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin ${origin} is not allowed by CORS.`));
+    }
+  })
+);
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (_request, response) => {
@@ -87,4 +98,26 @@ function normalizeGithubUrl(input: string) {
   }
 
   return parsed;
+}
+
+function parseAllowedOrigins(rawOrigins: string) {
+  return rawOrigins
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+function isAllowedOrigin(origin: string, allowedOrigins: string[]) {
+  return allowedOrigins.some((allowedOrigin) => {
+    if (allowedOrigin.includes("*")) {
+      const regex = new RegExp(
+        `^${allowedOrigin
+          .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+          .replace(/\*/g, ".*")}$`
+      );
+      return regex.test(origin);
+    }
+
+    return allowedOrigin === origin;
+  });
 }

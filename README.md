@@ -55,6 +55,52 @@ npm run dev
 
 The frontend runs on `http://localhost:5173` and the backend runs on `http://localhost:8787`.
 
+## Deploying on Vercel + Render
+
+This setup works well for Inspekta:
+
+- Frontend on Vercel
+- Backend on Render
+
+### Frontend on Vercel
+
+Deploy the `client` app and set this environment variable in Vercel:
+
+```bash
+VITE_API_BASE_URL=https://your-render-backend.onrender.com
+```
+
+You can use [client/.env.example](c:/Users/HP/Documents/Inspekta/client/.env.example) as the local reference.
+
+Recommended Vercel settings:
+
+- Root directory: `client`
+- Build command: `npm run build`
+- Output directory: `dist`
+
+### Backend on Render
+
+Deploy the `server` app and set these environment variables in Render:
+
+```bash
+PORT=10000
+CLIENT_ORIGIN=https://your-frontend.vercel.app,https://*.vercel.app,http://localhost:5173
+GEMINI_API_KEY=your_key_here
+GITHUB_TOKEN=your_github_token_here
+```
+
+Recommended Render settings:
+
+- Root directory: `server`
+- Build command: `npm install && npm run build`
+- Start command: `npm run start`
+
+Notes:
+
+- `CLIENT_ORIGIN` now supports multiple comma-separated values
+- It also supports simple wildcard origins like `https://*.vercel.app`
+- Keep your permanent Vercel production domain in that list even if you also allow previews
+
 ## How it works
 
 - Paste a URL into the frontend
